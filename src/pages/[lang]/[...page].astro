@@ -1,8 +1,9 @@
 ---
 import Base from '../../layouts/Base.astro';
 import ProjectCard from '../../components/ProjectCard.astro';
-import { languages, pages, t, url, type Lang, type UiKey } from '../../i18n/ui';
+import { languages, pages, t, url, asset, type Lang, type UiKey } from '../../i18n/ui';
 import { content } from '../../i18n/content';
+import { research } from '../../i18n/research';
 
 export function getStaticPaths() {
   return languages.flatMap((lang) =>
@@ -12,6 +13,7 @@ export function getStaticPaths() {
 const { lang, path } = Astro.props as { lang: Lang; path: string };
 const navKey = (path ? `nav.${path}` : 'nav.home') as UiKey;
 const c = content[lang];
+const r = research[lang];
 ---
 <Base lang={lang} path={path} title={path ? t(lang, navKey) : undefined}>
   {path === '' && (
@@ -74,7 +76,28 @@ const c = content[lang];
     </>
   )}
 
-  {(path === 'research' || path === 'wiki') && (
+  {path === 'research' && (
+    <>
+      <h1>{r.title} <span class="badge">{r.status}</span></h1>
+      <p class="lead">{r.lead}</p>
+      {r.sections.map((s) => (
+        <section>
+          <h2>{s.heading}</h2>
+          {s.paragraphs.map((p) => <p>{p}</p>)}
+          {s.bullets && <ul>{s.bullets.map((b) => <li>{b}</li>)}</ul>}
+          {s.figures?.map((f) => (
+            <figure>
+              <img src={asset(`images/research/${f.src}`)} alt={f.alt} loading="lazy" />
+              <figcaption class="muted">{f.caption}</figcaption>
+            </figure>
+          ))}
+        </section>
+      ))}
+      <p class="muted note">{r.note}</p>
+    </>
+  )}
+
+  {path === 'wiki' && (
     <>
       <h1>{t(lang, navKey)}</h1>
       <p class="muted">{t(lang, 'placeholder')}</p>
@@ -89,6 +112,10 @@ const c = content[lang];
   h3 { margin: 0 0 6px; font-size: 1.05rem; }
   .card p { margin: 0 0 10px; }
   .badge { font-size: 0.75rem; font-weight: 400; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 8px; margin-left: 6px; vertical-align: middle; }
+  figure { margin: 16px 0; }
+  figure img { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  figcaption { font-size: 0.9rem; margin-top: 6px; text-align: center; }
+  .note { margin-top: 40px; font-size: 0.9rem; }
   .chips { list-style: none; display: flex; gap: 8px; flex-wrap: wrap; padding: 0; }
   .chips li { border: 1px solid var(--line); border-radius: 999px; padding: 0 12px; }
 </style>

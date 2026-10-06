@@ -40,4 +40,8 @@ export function url(lang: Lang, path = ''): string {
   return `${base}/${lang}/${path}`;
 }
 
+export function asset(path: string): string {
+  return `${import.meta.env.BASE_URL.replace(/\/$/, '')}/${path}`;
+}
+
 export const pages = ['', 'research', 'wiki', 'projects', 'about'] as const;

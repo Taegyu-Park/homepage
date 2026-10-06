@@ -3,3 +3,4 @@ dist/
 .astro/
 PLAN.md
 reference.md
+*.pdf
