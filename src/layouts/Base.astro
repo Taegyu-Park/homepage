@@ -1,0 +1,70 @@
+---
+import '../styles/global.css';
+import { t, url, pages, type Lang, type UiKey } from '../i18n/ui';
+
+interface Props { lang: Lang; title?: string; path?: string; }
+const { lang, title, path = '' } = Astro.props;
+const other: Lang = lang === 'ko' ? 'en' : 'ko';
+const navKeys: UiKey[] = ['nav.home', 'nav.research', 'nav.wiki', 'nav.projects', 'nav.about'];
+const pageTitle = title ? `${title} · ${t(lang, 'siteTitle')}` : t(lang, 'siteTitle');
+const sub = (p: string) => (p ? `${p}/` : '');
+---
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={t(lang, 'tagline')} />
+    <link rel="alternate" hreflang={other} href={url(other, sub(path))} />
+    <script is:inline>
+      try {
+        var th = localStorage.getItem('theme');
+        if (th) document.documentElement.dataset.theme = th;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap bar">
+        <a class="brand" href={url(lang)}>{t(lang, 'siteTitle')}</a>
+        <nav>
+          {pages.map((p, i) => (
+            <a href={url(lang, sub(p))} aria-current={p === path ? 'page' : undefined}>{t(lang, navKeys[i])}</a>
+          ))}
+        </nav>
+        <div class="tools">
+          <a href={url(other, sub(path))} hreflang={other}>{t(lang, 'lang.switch')}</a>
+          <button id="theme" type="button" aria-label="Toggle theme">◐</button>
+        </div>
+      </div>
+    </header>
+    <main><slot /></main>
+    <footer class="wrap site-footer muted">
+      {t(lang, 'footer.note')} ·
+      <a href="https://github.com/Taegyu-Park">GitHub</a>
+    </footer>
+    <script is:inline>
+      document.getElementById('theme').addEventListener('click', function () {
+        var cur = document.documentElement.dataset.theme ||
+          (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        var next = cur === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try { localStorage.setItem('theme', next); } catch (e) {}
+      });
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  .site-header { border-bottom: 1px solid var(--line); }
+  .bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  .brand { font-weight: 700; color: var(--fg); text-decoration: none; }
+  .bar nav { display: flex; gap: 14px; flex-wrap: wrap; flex: 1; }
+  .bar nav a { color: var(--muted); text-decoration: none; }
+  .bar nav a:hover, .bar nav a[aria-current='page'] { color: var(--fg); }
+  .tools { display: flex; gap: 12px; align-items: center; }
+  .tools a { color: var(--muted); text-decoration: none; font-size: 0.9rem; }
+  #theme { background: none; border: 1px solid var(--line); color: var(--fg); border-radius: 6px; cursor: pointer; padding: 2px 8px; }
+  .site-footer { padding-top: 24px; padding-bottom: 32px; border-top: 1px solid var(--line); font-size: 0.9rem; }
+</style>

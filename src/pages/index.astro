@@ -1,0 +1,17 @@
+---
+import { url } from '../i18n/ui';
+const ko = url('ko');
+const en = url('en');
+---
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>박태규 · Taegyu Park</title>
+    <meta http-equiv="refresh" content={`0; url=${ko}`} />
+    <script is:inline define:vars={{ ko, en }}>
+      location.replace((navigator.language || 'ko').startsWith('ko') ? ko : en);
+    </script>
+  </head>
+  <body><a href={ko}>한국어</a> · <a href={en}>English</a></body>
+</html>
