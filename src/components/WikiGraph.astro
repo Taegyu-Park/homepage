@@ -1,0 +1,292 @@
+---
+import graph from '../data/wiki-graph.json';
+import { wikiText } from '../i18n/wiki';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+const w = wikiText[lang];
+const { stats, ...text } = w;
+const types = Object.keys(w.types);
+
+const byType = types.map((type) => ({
+  type,
+  items: graph.nodes.filter((n) => n.type === type).sort((a, b) => a.title.localeCompare(b.title)),
+}));
+---
+<p class="muted">{w.lead}</p>
+<p class="muted small">{w.notice}</p>
+<p class="muted small">{stats(graph.nodes.length, graph.links.length)} · {w.updated} {graph.generated}</p>
+
+<div id="wiki" data-text={JSON.stringify(text)}>
+  <div class="controls">
+    <input id="wiki-search" type="search" placeholder={w.search} aria-label={w.search} />
+    <div class="filters" id="wiki-filters">
+      {types.map((type) => (
+        <button type="button" class="chip" data-type={type} aria-pressed="true">
+          <i class={`dot t-${type}`}></i>{w.types[type]}
+        </button>
+      ))}
+    </div>
+    <button type="button" id="wiki-reset" class="chip">{w.reset}</button>
+  </div>
+
+  <div class="stage">
+    <canvas id="wiki-canvas" aria-label={w.title}></canvas>
+    <aside id="wiki-panel" class="card" hidden></aside>
+    <div id="wiki-tip" class="tip" hidden></div>
+  </div>
+  <p class="muted small">{w.hint}</p>
+</div>
+
+<details class="list">
+  <summary>{w.listTitle}</summary>
+  {byType.map(({ type, items }) => (
+    <section>
+      <h3>{w.types[type]} ({items.length})</h3>
+      <ul>
+        {items.map((n) => <li>{n.title}</li>)}
+      </ul>
+    </section>
+  ))}
+</details>
+
+<script>
+  import { forceSimulation, forceLink, forceManyBody, forceX, forceY, forceCollide } from 'd3-force';
+  import { zoom, zoomIdentity, type ZoomTransform } from 'd3-zoom';
+  import { select } from 'd3-selection';
+  import graph from '../data/wiki-graph.json';
+
+  interface N { id: string; type: string; title: string; tags: string[]; status: string; summary: string; deg: number; x: number; y: number; r: number; }
+  interface L { source: N | string; target: N | string; }
+
+  const root = document.getElementById('wiki') as HTMLElement;
+  const text = JSON.parse(root.dataset.text!) as {
+    status: Record<string, string>; types: Record<string, string>; connections: string; empty: string;
+  };
+  const canvas = document.getElementById('wiki-canvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  const panel = document.getElementById('wiki-panel') as HTMLElement;
+  const tip = document.getElementById('wiki-tip') as HTMLElement;
+  const search = document.getElementById('wiki-search') as HTMLInputElement;
+
+  const nodes: N[] = graph.nodes.map((n) => ({ ...n, x: 0, y: 0, r: 2 + Math.sqrt(n.deg) * 0.85 }));
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const links: L[] = graph.links.map((l) => ({ source: l.s, target: l.t }));
+  const neighbors = new Map<string, Set<string>>();
+  for (const l of graph.links) {
+    (neighbors.get(l.s) ?? neighbors.set(l.s, new Set()).get(l.s)!).add(l.t);
+    (neighbors.get(l.t) ?? neighbors.set(l.t, new Set()).get(l.t)!).add(l.s);
+  }
+
+  // 레이아웃은 미리 계산해 두고 정적으로 그린다.
+  const sim = forceSimulation(nodes as any)
+    .force('link', forceLink(links as any).id((d: any) => d.id).distance(34).strength(0.25))
+    .force('charge', forceManyBody().strength(-38))
+    .force('x', forceX(0).strength(0.06))
+    .force('y', forceY(0).strength(0.06))
+    .force('collide', forceCollide().radius((d: any) => d.r + 1.5))
+    .stop();
+  for (let i = 0; i < 320; i++) sim.tick();
+
+  const palette = () => {
+    const th = document.documentElement.dataset.theme;
+    const dark = th ? th === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    return dark
+      ? { paper: '#6ea8fe', concept: '#5ec29a', model: '#f0a35e', moc: '#e879a8', dataset: '#b49cf0' }
+      : { paper: '#2b6cd4', concept: '#1f8a63', model: '#c9741f', moc: '#c2336f', dataset: '#7a56d6' };
+  };
+  const css = (v: string) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  let tf: ZoomTransform = zoomIdentity;
+  let width = 0, height = 0, dpr = 1;
+  let hover: N | null = null, selected: N | null = null;
+  const activeTypes = new Set(Object.keys(text.types));
+  let query = '';
+
+  const matches = (n: N) =>
+    !query || n.title.toLowerCase().includes(query) || n.tags.some((t) => t.toLowerCase().includes(query));
+  const visible = (n: N) => activeTypes.has(n.type);
+
+  function focusSet(): Set<string> | null {
+    const f = hover ?? selected;
+    if (!f) return null;
+    return new Set([f.id, ...(neighbors.get(f.id) ?? [])]);
+  }
+
+  function draw() {
+    const c = palette() as Record<string, string>;
+    const fg = css('--fg'), muted = css('--muted');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    ctx.save();
+    ctx.translate(tf.x, tf.y);
+    ctx.scale(tf.k, tf.k);
+    const focus = focusSet();
+    const searching = query.length > 0;
+
+    ctx.lineWidth = 0.6 / tf.k;
+    for (const l of links as { source: N; target: N }[]) {
+      if (!visible(l.source) || !visible(l.target)) continue;
+      const on = focus && focus.has(l.source.id) && focus.has(l.target.id) && (l.source === (hover ?? selected) || l.target === (hover ?? selected));
+      ctx.globalAlpha = on ? 0.9 : focus || searching ? 0.04 : 0.16;
+      ctx.strokeStyle = on ? fg : muted;
+      ctx.beginPath();
+      ctx.moveTo(l.source.x, l.source.y);
+      ctx.lineTo(l.target.x, l.target.y);
+      ctx.stroke();
+    }
+
+    const labelled: N[] = [];
+    for (const n of nodes) {
+      if (!visible(n)) continue;
+      const dim = (focus && !focus.has(n.id)) || (searching && !matches(n));
+      ctx.globalAlpha = dim ? 0.12 : 1;
+      ctx.fillStyle = c[n.type] ?? muted;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+      ctx.fill();
+      if (n === selected) { ctx.lineWidth = 2 / tf.k; ctx.strokeStyle = fg; ctx.stroke(); }
+      if (!dim && (n.type === 'moc' || (focus ? focus.has(n.id) : n.deg >= 30 && tf.k > 0.7) || (tf.k > 1.6 && n.deg >= 12) || (searching && matches(n)) || tf.k > 2.2)) labelled.push(n);
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = fg;
+    ctx.font = `${11 / tf.k}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    for (const n of labelled) ctx.fillText(n.title.length > 38 ? n.title.slice(0, 37) + '…' : n.title, n.x + n.r + 3 / tf.k, n.y);
+    ctx.restore();
+  }
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    width = rect.width; height = rect.height;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    draw();
+  }
+
+  const zoomer = zoom<HTMLCanvasElement, unknown>()
+    .scaleExtent([0.3, 8])
+    .on('zoom', (e) => { tf = e.transform; draw(); });
+  const sel = select(canvas);
+  sel.call(zoomer);
+
+  function resetView() {
+    const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const s = Math.min(width / (x1 - x0 + 60), height / (y1 - y0 + 60));
+    sel.call(zoomer.transform, zoomIdentity.translate(width / 2 - s * (x0 + x1) / 2, height / 2 - s * (y0 + y1) / 2).scale(s));
+  }
+
+  function pick(ev: MouseEvent): N | null {
+    const rect = canvas.getBoundingClientRect();
+    const x = (ev.clientX - rect.left - tf.x) / tf.k;
+    const y = (ev.clientY - rect.top - tf.y) / tf.k;
+    let best: N | null = null, bd = Infinity;
+    for (const n of nodes) {
+      if (!visible(n)) continue;
+      const d = Math.hypot(n.x - x, n.y - y);
+      if (d <= n.r + 4 / tf.k && d < bd) { best = n; bd = d; }
+    }
+    return best;
+  }
+
+  const esc = (s: string) => s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]!));
+
+  function showPanel(n: N | null) {
+    selected = n;
+    if (!n) { panel.hidden = true; draw(); return; }
+    const near = [...(neighbors.get(n.id) ?? [])].map((id) => byId.get(id)!).sort((a, b) => b.deg - a.deg);
+    panel.innerHTML = `
+      <button type="button" class="close" aria-label="close">×</button>
+      <p class="meta"><span class="badge">${esc(text.types[n.type] ?? n.type)}</span> <span class="muted">${esc(text.status[n.status] ?? n.status)}</span></p>
+      <h3>${esc(n.title)}</h3>
+      ${n.summary ? `<p>${esc(n.summary)}</p>` : ''}
+      ${n.tags.length ? `<p class="muted small">${n.tags.map((t) => '#' + esc(t)).join(' ')}</p>` : ''}
+      <h4>${esc(text.connections)} (${near.length})</h4>
+      <ul>${near.map((m) => `<li><button type="button" data-id="${esc(m.id)}">${esc(m.title)}</button></li>`).join('')}</ul>`;
+    panel.hidden = false;
+    panel.scrollTop = 0;
+    draw();
+  }
+
+  panel.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    if (t.classList.contains('close')) showPanel(null);
+    const id = t.dataset.id;
+    if (id) {
+      const n = byId.get(id)!;
+      showPanel(n);
+      sel.transition().duration(350).call(zoomer.translateTo, n.x, n.y);
+    }
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    const n = pick(e);
+    if (n !== hover) { hover = n; canvas.style.cursor = n ? 'pointer' : 'grab'; draw(); }
+    if (n) {
+      const rect = canvas.getBoundingClientRect();
+      tip.textContent = n.title;
+      tip.style.left = `${e.clientX - rect.left + 12}px`;
+      tip.style.top = `${e.clientY - rect.top + 12}px`;
+      tip.hidden = false;
+    } else tip.hidden = true;
+  });
+  canvas.addEventListener('mouseleave', () => { hover = null; tip.hidden = true; draw(); });
+  canvas.addEventListener('click', (e) => { const n = pick(e); if (n || selected) showPanel(n); });
+
+  search.addEventListener('input', () => { query = search.value.trim().toLowerCase(); draw(); });
+  document.getElementById('wiki-filters')!.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest('button');
+    if (!b) return;
+    const type = b.dataset.type!;
+    if (activeTypes.has(type)) activeTypes.delete(type); else activeTypes.add(type);
+    b.setAttribute('aria-pressed', String(activeTypes.has(type)));
+    if (selected && !visible(selected)) showPanel(null); else draw();
+  });
+  document.getElementById('wiki-reset')!.addEventListener('click', () => {
+    search.value = ''; query = '';
+    for (const b of document.querySelectorAll<HTMLElement>('#wiki-filters button')) b.setAttribute('aria-pressed', 'true');
+    for (const k of Object.keys(text.types)) activeTypes.add(k);
+    showPanel(null);
+    resetView();
+  });
+
+  new ResizeObserver(() => { resize(); }).observe(canvas);
+  new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  resize();
+  resetView();
+</script>
+
+<style is:global>
+  #wiki .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 16px 0 10px; }
+  #wiki-search { flex: 1 1 180px; min-width: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); font: inherit; }
+  #wiki .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  #wiki .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 999px; padding: 2px 12px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+  #wiki .chip[aria-pressed='false'] { opacity: 0.45; }
+  #wiki .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .t-paper { background: #2b6cd4; } .t-concept { background: #1f8a63; } .t-model { background: #c9741f; }
+  .t-moc { background: #c2336f; } .t-dataset { background: #7a56d6; }
+  #wiki .stage { position: relative; display: grid; grid-template-columns: 1fr; gap: 12px; }
+  #wiki-canvas { width: 100%; height: 68vh; min-height: 420px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); cursor: grab; touch-action: none; }
+  #wiki-panel { max-height: 40vh; overflow: auto; position: relative; }
+  #wiki-panel[hidden], #wiki-tip[hidden] { display: none; }
+  #wiki-panel h3 { margin: 4px 0 8px; font-size: 1.05rem; }
+  #wiki-panel h4 { margin: 14px 0 6px; font-size: 0.9rem; }
+  #wiki-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  #wiki-panel li button { border: 1px solid var(--line); background: none; color: var(--accent); border-radius: 6px; padding: 0 8px; font: inherit; font-size: 0.85rem; cursor: pointer; text-align: left; }
+  #wiki-panel .close { position: absolute; top: 8px; right: 10px; border: none; background: none; color: var(--muted); font-size: 1.3rem; cursor: pointer; }
+  #wiki-panel .meta { margin: 0; font-size: 0.85rem; }
+  #wiki-panel .badge { color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0 8px; }
+  #wiki .tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--bg); padding: 2px 8px; border-radius: 6px; font-size: 0.8rem; max-width: 280px; }
+  .small { font-size: 0.85rem; margin: 4px 0; }
+  .list { margin-top: 24px; }
+  .list summary { cursor: pointer; }
+  .list ul { columns: 2 260px; padding-left: 18px; font-size: 0.9rem; }
+  @media (min-width: 900px) {
+    #wiki-panel { position: absolute; top: 10px; right: 10px; width: 300px; max-height: calc(68vh - 20px); z-index: 2; }
+  }
+</style>
