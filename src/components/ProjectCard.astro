@@ -1,0 +1,24 @@
+---
+import type { Project } from '../i18n/content';
+interface Props { project: Project; repoLabel: string; liveLabel: string; }
+const { project, repoLabel, liveLabel } = Astro.props;
+---
+<article class="card project">
+  <h3>{project.name}</h3>
+  <p>{project.summary}</p>
+  <ul class="tags">
+    {project.tags.map((tag) => <li>{tag}</li>)}
+  </ul>
+  <p class="links">
+    <a href={project.repo}>{repoLabel} ↗</a>
+    {project.live && <a href={project.live}>{liveLabel} ↗</a>}
+  </p>
+</article>
+
+<style>
+  .project h3 { margin: 0 0 6px; font-size: 1.05rem; }
+  .project p { margin: 0 0 10px; }
+  .tags { list-style: none; display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; padding: 0; }
+  .tags li { font-size: 0.8rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 10px; }
+  .links { display: flex; gap: 16px; margin: 0; font-size: 0.95rem; }
+</style>
