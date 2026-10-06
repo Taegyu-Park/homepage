@@ -72,7 +72,7 @@ function summarize(node) {
   const paras = node.body
     .split(/\r?\n\s*\r?\n/)
     .map((p) => p.trim())
-    .filter((p) => p.length >= 60 && !/^(#|[-*>|`]|\d+\.)/.test(p));
+    .filter((p) => p.length >= 60 && !p.includes('raw/') &&!/^(#|[-*>|`]|\d+\.)/.test(p));
   let s = (paras[0] ?? '').replace(/\s+/g, ' ');
   s = s
     .replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?\|([^\]]+)\]\]/g, '$2')
