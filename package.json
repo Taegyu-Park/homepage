@@ -10,6 +10,7 @@
     "sync-wiki": "node scripts/build-wiki-graph.mjs"
   },
   "dependencies": {
+    "@astrojs/sitemap": "^3.7.4",
     "astro": "^5.0.0",
     "d3-force": "^3.0.0",
     "d3-selection": "^3.0.0",

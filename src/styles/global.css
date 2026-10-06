@@ -45,3 +45,9 @@ h2 { font-size: 1.25rem; margin: 40px 0 12px; }
   border-radius: 10px;
   padding: 16px 18px;
 }
+img, canvas { max-width: 100%; }
+h1, h2, h3, p, li { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .bar nav { order: 3; flex-basis: 100%; }
+  .bar .tools { margin-left: auto; }
+}

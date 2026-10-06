@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://taegyu-park.github.io/homepage/sitemap-index.xml
