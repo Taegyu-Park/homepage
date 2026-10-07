@@ -24,8 +24,8 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           '창 바깥의 차양 위에 PV를 결합하고, 전동 액추에이터로 각도를 바꿉니다. 태양 고도각에 맞춰 패널을 세우면 일사와 패널이 직각에 가까워져 발전 효율이 높아지고, 동시에 창으로 들어오는 직달일사를 가려 줍니다.',
         ],
         figures: [
-          { src: 'slide-10.png', alt: 'BIPV와 차양을 결합한 구조 개념도', caption: '차양(Shading) 위에 PV를 결합한 BIPV 구조' },
-          { src: 'slide-13.png', alt: '태양 고도에 맞춰 PV 각도를 바꾸는 개념도', caption: '태양 고도각을 따라 PV 각도를 조절하는 개념' },
+          { src: 'bipv-structure.png', alt: 'BIPV와 차양을 결합한 구조 개념도', caption: '차양(Shading) 위에 PV를 결합한 BIPV 구조' },
+          { src: 'sun-tracking.png', alt: '태양 고도에 맞춰 PV 각도를 바꾸는 개념도', caption: '태양 고도각을 따라 PV 각도를 조절하는 개념' },
         ],
       },
       {
@@ -35,7 +35,7 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           '비교를 위해 세 가지 경우를 나눴습니다.',
         ],
         bullets: ['Case 1: BIPV 없음', 'Case 2: 각도를 0°~90° 중 하나로 고정한 BIPV', 'Case 3: 태양 고도에 따라 각도를 바꾸는 Kinetic BIPV'],
-        figures: [{ src: 'slide-24.png', alt: '세 가지 비교 케이스', caption: '비교한 세 가지 케이스' }],
+        figures: [{ src: 'cases.png', alt: '세 가지 비교 케이스', caption: '비교한 세 가지 케이스' }],
       },
       {
         heading: '결과',
@@ -45,9 +45,9 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           '25년 누적 비용(초기 설치비 + 냉난방 전력 + 유지보수 + 교체, 할인 없이 단순 합산)을 비교하면, Kinetic BIPV는 초기 비용이 가장 크지만 약 12~13년차부터 BIPV가 없는 경우보다 낮아지고, 25년 뒤에는 약 2.1억 원으로 BIPV 없음(약 3.2억 원)과 고정 BIPV(약 2.75~2.87억 원)보다 낮았습니다. 액추에이터는 12년차와 24년차에 교체하는 것으로 가정했습니다.',
         ],
         figures: [
-          { src: 'slide-25.png', alt: '케이스별 연간 냉난방 부하 비교', caption: '케이스별 연간 냉난방 부하' },
-          { src: 'slide-28.png', alt: '케이스별 연간 PV 발전량 비교', caption: '케이스별 연간 PV 발전량' },
-          { src: 'slide-31.png', alt: '케이스별 연간 순에너지 사용량', caption: '케이스별 순에너지 사용량 (HVAC 전력 − PV 발전)' },
+          { src: 'thermal-load.png', alt: '케이스별 연간 냉난방 부하 비교', caption: '케이스별 연간 냉난방 부하' },
+          { src: 'pv-generation.png', alt: '케이스별 연간 PV 발전량 비교', caption: '케이스별 연간 PV 발전량' },
+          { src: 'net-energy.png', alt: '케이스별 연간 순에너지 사용량', caption: '케이스별 순에너지 사용량 (HVAC 전력 − PV 발전)' },
           { src: 'cumulative-cost.png', alt: '케이스별 25년 누적 비용 비교', caption: '케이스별 25년 누적 비용 (단위: 백만 원, 할인 없음)' },
         ],
       },
@@ -88,8 +88,8 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           'PV is combined with a shading element outside the window, and an electric actuator changes its angle. Tilting the panel with the sun altitude keeps it closer to perpendicular to the incoming sunlight, which raises efficiency while also blocking direct sun from the window.',
         ],
         figures: [
-          { src: 'slide-10.png', alt: 'Diagram of BIPV combined with a shading element', caption: 'BIPV structure: PV combined with a shading element' },
-          { src: 'slide-13.png', alt: 'Diagram of PV angle following sun altitude', caption: 'Adjusting the PV angle to follow the sun altitude' },
+          { src: 'bipv-structure.png', alt: 'Diagram of BIPV combined with a shading element', caption: 'BIPV structure: PV combined with a shading element' },
+          { src: 'sun-tracking.png', alt: 'Diagram of PV angle following sun altitude', caption: 'Adjusting the PV angle to follow the sun altitude' },
         ],
       },
       {
@@ -99,7 +99,7 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           'Three cases were compared.',
         ],
         bullets: ['Case 1: no BIPV', 'Case 2: BIPV fixed at one angle between 0° and 90°', 'Case 3: Kinetic BIPV that changes angle with sun altitude'],
-        figures: [{ src: 'slide-24.png', alt: 'The three compared cases', caption: 'The three compared cases' }],
+        figures: [{ src: 'cases.png', alt: 'The three compared cases', caption: 'The three compared cases' }],
       },
       {
         heading: 'Results',
@@ -109,9 +109,9 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           'Comparing 25-year cumulative cost (installation + HVAC electricity + maintenance + replacement, simply summed without discounting), Kinetic BIPV has the highest upfront cost but drops below the no-BIPV case from around year 12 to 13, and ends at about 214 million KRW versus about 324 million for no BIPV and about 275 to 287 million for fixed BIPV. The actuator is assumed to be replaced in years 12 and 24.',
         ],
         figures: [
-          { src: 'slide-25.png', alt: 'Annual heating and cooling load by case', caption: 'Annual heating and cooling load by case' },
-          { src: 'slide-28.png', alt: 'Annual PV generation by case', caption: 'Annual PV generation by case' },
-          { src: 'slide-31.png', alt: 'Annual net energy use by case', caption: 'Net energy use by case (HVAC electricity − PV generation)' },
+          { src: 'thermal-load.png', alt: 'Annual heating and cooling load by case', caption: 'Annual heating and cooling load by case' },
+          { src: 'pv-generation.png', alt: 'Annual PV generation by case', caption: 'Annual PV generation by case' },
+          { src: 'net-energy.png', alt: 'Annual net energy use by case', caption: 'Net energy use by case (HVAC electricity − PV generation)' },
           { src: 'cumulative-cost.png', alt: '25-year cumulative cost by case', caption: '25-year cumulative cost by case (million KRW, undiscounted)' },
         ],
       },
