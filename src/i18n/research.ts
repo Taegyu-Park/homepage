@@ -1,7 +1,7 @@
 import type { Lang } from './ui';
 
 export interface Figure { src: string; alt: string; caption: string; }
-export interface Section { heading: string; paragraphs: string[]; bullets?: string[]; figures?: Figure[]; }
+export interface Section { heading: string; paragraphs: string[]; bullets?: string[]; figures?: Figure[]; chart?: boolean; }
 
 export interface LogEntry { date: string; text: string; }
 
@@ -39,6 +39,7 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
       },
       {
         heading: '결과',
+        chart: true,
         paragraphs: [
           '고정 BIPV는 각도에 따라 냉난방 부하가 크게 달라지지 않았지만, Kinetic BIPV는 연간 PV 발전량이 가장 높았습니다. 발전량과 냉난방 전력을 합친 순에너지 사용량도 Kinetic이 가장 낮았습니다.',
           '이번 모델 기준으로, Kinetic BIPV는 다른 케이스보다 순에너지 사용량을 최소 약 53%, 최대 약 73% 줄이는 것으로 나타났습니다. 경제성 분석에서도 일반 BIPV보다 생애주기비용 면에서 유리했습니다.',
@@ -103,6 +104,7 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
       },
       {
         heading: 'Results',
+        chart: true,
         paragraphs: [
           'Heating and cooling loads did not change much between fixed angles, but the Kinetic BIPV produced the most PV electricity per year. Net energy use, which combines HVAC electricity and PV generation, was also lowest for Kinetic.',
           'In this model, Kinetic BIPV reduced net energy use by at least about 53% and up to about 73% compared with the other cases. An economic analysis also favored it over fixed BIPV in life-cycle cost.',

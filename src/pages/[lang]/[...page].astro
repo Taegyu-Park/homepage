@@ -6,6 +6,7 @@ import { content } from '../../i18n/content';
 import { research } from '../../i18n/research';
 import { wikiText } from '../../i18n/wiki';
 import WikiGraph from '../../components/WikiGraph.astro';
+import BipvChart from '../../components/BipvChart.astro';
 
 export function getStaticPaths() {
   return languages.flatMap((lang) =>
@@ -87,6 +88,7 @@ const r = research[lang];
           <h2>{s.heading}</h2>
           {s.paragraphs.map((p) => <p>{p}</p>)}
           {s.bullets && <ul>{s.bullets.map((b) => <li>{b}</li>)}</ul>}
+          {s.chart && <BipvChart lang={lang} />}
           {s.figures?.map((f) => (
             <figure>
               <img src={asset(`images/research/${f.src}`)} alt={f.alt} loading="lazy" />

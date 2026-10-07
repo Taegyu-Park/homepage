@@ -1,0 +1,188 @@
+---
+import { bipvResults } from '../data/bipv-results';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang; }
+const { lang } = Astro.props;
+
+const text = {
+  ko: {
+    title: '직접 눌러 보는 결과',
+    hint: '막대에 마우스를 올리거나(모바일은 누르면) 케이스별 수치가 아래에 나타납니다.',
+    metrics: { pv: 'PV 발전량', net: '순 전력 사용량', load: '냉난방 부하' },
+    units: 'MWh/년',
+    base: 'BIPV 없음',
+    fixed: (a: number) => `고정 ${a}°`,
+    kinetic: 'Kinetic',
+    heating: '난방 부하',
+    cooling: '냉방 부하',
+    total: '부하 합계',
+    pv: 'PV 발전량',
+    gross: '냉난방 전력',
+    net: '순 전력 (냉난방 − PV)',
+    vsBase: 'BIPV 없음 대비',
+    axis: 'MWh/년',
+  },
+  en: {
+    title: 'Explore the results',
+    hint: 'Hover over a bar (or tap on mobile) to see the numbers for each case below.',
+    metrics: { pv: 'PV generation', net: 'Net electricity', load: 'Heating & cooling load' },
+    units: 'MWh/yr',
+    base: 'No BIPV',
+    fixed: (a: number) => `Fixed ${a}°`,
+    kinetic: 'Kinetic',
+    heating: 'Heating load',
+    cooling: 'Cooling load',
+    total: 'Total load',
+    pv: 'PV generation',
+    gross: 'HVAC electricity',
+    net: 'Net electricity (HVAC − PV)',
+    vsBase: 'vs. no BIPV',
+    axis: 'MWh/yr',
+  },
+}[lang];
+
+const cases = bipvResults.map((r) => ({
+  ...r,
+  label: r.id === 'base' ? text.base : r.id === 'kinetic' ? text.kinetic : text.fixed(Number(r.id.slice(1))),
+}));
+const payload = {
+  cases,
+  t: { ...text, fixed: undefined },
+};
+---
+<section class="bchart" data-payload={JSON.stringify(payload)}>
+  <h3>{text.title}</h3>
+  <div class="tabs" role="tablist">
+    {Object.entries(text.metrics).map(([key, label], i) => (
+      <button type="button" role="tab" data-metric={key} aria-selected={i === 0 ? 'true' : 'false'}>{label}</button>
+    ))}
+  </div>
+  <svg class="bsvg" viewBox="0 0 900 400" role="img" aria-label={text.title}></svg>
+  <dl class="readout" aria-live="polite"></dl>
+  <p class="muted small">{text.hint}</p>
+</section>
+
+<script>
+  interface C { id: string; label: string; heating: number; cooling: number; pv: number; net: number; }
+  const root = document.querySelector<HTMLElement>('.bchart')!;
+  const { cases, t } = JSON.parse(root.dataset.payload!) as { cases: C[]; t: Record<string, any> };
+  const svg = root.querySelector('svg')!;
+  const readout = root.querySelector('.readout')!;
+  const W = 900, H = 400, L = 56, R = 16, T = 28, B = 56;
+  let metric = 'pv';
+  let selected = cases.length - 1;
+
+  const fmt = (n: number) => n.toFixed(1);
+  const NS = 'http://www.w3.org/2000/svg';
+
+  function value(c: C) { return metric === 'pv' ? c.pv : metric === 'net' ? c.net : c.heating + c.cooling; }
+  const niceMax = (v: number) => { const step = v > 100 ? 40 : v > 40 ? 10 : 10; return Math.ceil(v / step) * step; };
+
+  function el(name: string, attrs: Record<string, string | number>, text?: string) {
+    const e = document.createElementNS(NS, name);
+    for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v));
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function render() {
+    svg.replaceChildren();
+    const max = niceMax(Math.max(...cases.map(value)));
+    const y = (v: number) => T + (H - T - B) * (1 - v / max);
+    const bw = (W - L - R) / cases.length;
+    const ticks = 5;
+
+    for (let i = 0; i <= ticks; i++) {
+      const v = (max / ticks) * i;
+      svg.append(el('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'grid' }));
+      svg.append(el('text', { x: L - 8, y: y(v) + 4, class: 'tick', 'text-anchor': 'end' }, String(Math.round(v))));
+    }
+    svg.append(el('text', { x: 12, y: 14, class: 'tick' }, t.axis));
+
+    cases.forEach((c, i) => {
+      const x = L + bw * i + bw * 0.14;
+      const w = bw * 0.72;
+      const g = el('g', { class: 'bar' + (i === selected ? ' on' : ''), tabindex: 0, role: 'button', 'aria-label': `${c.label}: ${fmt(value(c))}` });
+      const kin = c.id === 'kinetic';
+      if (metric === 'load') {
+        const yh = y(c.heating), yt = y(c.heating + c.cooling);
+        g.append(el('rect', { x, y: yh, width: w, height: y(0) - yh, class: 'heat' }));
+        g.append(el('rect', { x, y: yt, width: w, height: yh - yt, class: 'cool' }));
+      } else {
+        const v = value(c);
+        g.append(el('rect', { x, y: y(v), width: w, height: Math.max(y(0) - y(v), 0), class: kin ? 'kin' : c.id === 'base' ? 'base' : 'fix' }));
+      }
+      g.append(el('rect', { x: L + bw * i, y: T, width: bw, height: H - T - B, class: 'hit' }));
+      g.append(el('text', { x: x + w / 2, y: y(value(c)) - 6, class: 'val', 'text-anchor': 'middle' }, fmt(value(c))));
+      const lab = el('text', { x: x + w / 2, y: H - B + 18, class: 'cat', 'text-anchor': 'middle' });
+      const parts = c.label.split(' ');
+      parts.forEach((p, k) => lab.append(el('tspan', { x: x + w / 2, dy: k ? 14 : 0 }, p)));
+      g.append(lab);
+      g.addEventListener('mouseenter', () => select(i));
+      g.addEventListener('focus', () => select(i));
+      g.addEventListener('click', () => select(i));
+      svg.append(g);
+    });
+    fill();
+  }
+
+  function fill() {
+    const c = cases[selected];
+    const base = cases[0];
+    const delta = c.id === 'base' ? '' : `${Math.round(((c.net - base.net) / base.net) * 100)}%`;
+    const rows: [string, string][] = [
+      [t.heating, fmt(c.heating)],
+      [t.cooling, fmt(c.cooling)],
+      [t.total, fmt(c.heating + c.cooling)],
+      [t.pv, fmt(c.pv)],
+      [t.net, fmt(c.net)],
+    ];
+    readout.innerHTML =
+      `<div class="rt"><b>${c.label}</b> <span class="muted">(${t.units})</span></div>` +
+      rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('') +
+      (delta ? `<div class="hl"><dt>${t.net} ${t.vsBase}</dt><dd>${delta}</dd></div>` : '');
+  }
+
+  function select(i: number) {
+    if (i === selected) return;
+    selected = i;
+    svg.querySelectorAll('.bar').forEach((b, k) => b.classList.toggle('on', k === i));
+    fill();
+  }
+
+  root.querySelectorAll<HTMLButtonElement>('.tabs button').forEach((b) =>
+    b.addEventListener('click', () => {
+      metric = b.dataset.metric!;
+      root.querySelectorAll('.tabs button').forEach((o) => o.setAttribute('aria-selected', String(o === b)));
+      render();
+    }),
+  );
+  render();
+</script>
+
+<style is:global>
+  .bchart { margin: 20px 0 8px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  .bchart h3 { margin: 0 0 10px; font-size: 1.05rem; }
+  .bchart .small { font-size: 0.85rem; margin: 4px 0 0; }
+  .bchart .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .bchart .tabs button { border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 999px; padding: 2px 14px; font: inherit; font-size: 0.9rem; cursor: pointer; }
+  .bchart .tabs button[aria-selected='true'] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .bsvg { width: 100%; height: auto; display: block; }
+  .bsvg .grid { stroke: var(--line); stroke-width: 1; }
+  .bsvg .tick, .bsvg .cat { fill: var(--muted); font-size: 12px; }
+  .bsvg .val { fill: var(--fg); font-size: 12px; font-weight: 600; }
+  .bsvg .hit { fill: transparent; }
+  .bsvg .bar { cursor: pointer; outline: none; }
+  .bsvg .bar rect:not(.hit) { opacity: 0.55; transition: opacity 0.12s; }
+  .bsvg .bar.on rect:not(.hit), .bsvg .bar:focus-visible rect:not(.hit) { opacity: 1; }
+  .bsvg .bar.on .cat { fill: var(--fg); font-weight: 700; }
+  .bsvg .fix { fill: #3b8fe8; } .bsvg .base { fill: #7b808a; } .bsvg .kin { fill: #f2711c; }
+  .bsvg .heat { fill: #f28b82; } .bsvg .cool { fill: #5aa9f2; }
+  .readout { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 16px; margin: 12px 0 8px; }
+  .readout .rt { grid-column: 1 / -1; }
+  .readout div { margin: 0; }
+  .readout dt { color: var(--muted); font-size: 0.8rem; }
+  .readout dd { margin: 0; font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .readout .hl dd { color: var(--accent); }
+</style>
