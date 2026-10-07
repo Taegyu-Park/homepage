@@ -46,9 +46,6 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           '25년 누적 비용(초기 설치비 + 냉난방 전력 + 유지보수 + 교체, 할인 없이 단순 합산)을 비교하면, Kinetic BIPV는 초기 비용이 가장 크지만 약 12~13년차부터 BIPV가 없는 경우보다 낮아지고, 25년 뒤에는 약 2.1억 원으로 BIPV 없음(약 3.2억 원)과 고정 BIPV(약 2.75~2.87억 원)보다 낮았습니다. 액추에이터는 12년차와 24년차에 교체하는 것으로 가정했습니다.',
         ],
         figures: [
-          { src: 'thermal-load.png', alt: '케이스별 연간 냉난방 부하 비교', caption: '케이스별 연간 냉난방 부하' },
-          { src: 'pv-generation.png', alt: '케이스별 연간 PV 발전량 비교', caption: '케이스별 연간 PV 발전량' },
-          { src: 'net-energy.png', alt: '케이스별 연간 순에너지 사용량', caption: '케이스별 순에너지 사용량 (HVAC 전력 − PV 발전)' },
           { src: 'cumulative-cost.png', alt: '케이스별 25년 누적 비용 비교', caption: '케이스별 25년 누적 비용 (단위: 백만 원, 할인 없음)' },
         ],
       },
@@ -111,9 +108,6 @@ export const research: Record<Lang, { title: string; status: string; lead: strin
           'Comparing 25-year cumulative cost (installation + HVAC electricity + maintenance + replacement, simply summed without discounting), Kinetic BIPV has the highest upfront cost but drops below the no-BIPV case from around year 12 to 13, and ends at about 214 million KRW versus about 324 million for no BIPV and about 275 to 287 million for fixed BIPV. The actuator is assumed to be replaced in years 12 and 24.',
         ],
         figures: [
-          { src: 'thermal-load.png', alt: 'Annual heating and cooling load by case', caption: 'Annual heating and cooling load by case' },
-          { src: 'pv-generation.png', alt: 'Annual PV generation by case', caption: 'Annual PV generation by case' },
-          { src: 'net-energy.png', alt: 'Annual net energy use by case', caption: 'Net energy use by case (HVAC electricity − PV generation)' },
           { src: 'cumulative-cost.png', alt: '25-year cumulative cost by case', caption: '25-year cumulative cost by case (million KRW, undiscounted)' },
         ],
       },
